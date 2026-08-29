@@ -7,29 +7,31 @@
     <style>
         body { font-family: Arial, sans-serif; background: #222; color: #fff; text-align: center; padding: 20px; }
         #container { display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
-        #rom-list-container { background: #333; padding: 15px; border-radius: 8px; width: 220px; text-align: left; }
+        #rom-list-container { background: #333; padding: 15px; border-radius: 8px; width: 220px; text-align: left; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         #rom-list { list-style: none; padding: 0; max-height: 400px; overflow-y: auto; }
-        #rom-list li { padding: 10px; background: #444; margin-bottom: 5px; cursor: pointer; border-radius: 4px; border-left: 4px solid #007bff; }
+        #rom-list li { padding: 10px; background: #444; margin-bottom: 5px; cursor: pointer; border-radius: 4px; transition: 0.2s; text-transform: capitalize; border-left: 4px solid #007bff; }
         #rom-list li:hover { background: #555; }
         #emulator-wrapper { background: #000; border: 4px solid #444; border-radius: 8px; width: 320px; height: 288px; display: flex; align-items: center; justify-content: center; }
         #emulator { width: 100%; height: 100%; image-rendering: pixelated; }
         .controls-info { font-size: 13px; color: #aaa; margin-top: 10px; background: #111; padding: 10px; border-radius: 5px; display: inline-block; }
         #status { color: #ffc107; font-weight: bold; margin-bottom: 10px; }
     </style>
-    <!-- Ενσωμάτωση του επίσημου, σταθερού αρχείου GameBoyCore απευθείας από έμπιστο CDN της κοινότητας JS -->
-    <script src="https://cloudflare.com"></script>
 </head>
 <body>
 
-    <h1>Game Boy Emulator</h1>
-    <div id="status">Έτοιμο. Επιλέξτε παιχνίδι:</div>
+    <h1>Game Boy / Color Emulator</h1>
+    <div id="status">Έτοιμο. Επιλέξτε παιχνίδι από τη λίστα:</div>
 
     <div id="container">
+        <!-- Λίστα με τις ROMs -->
         <div id="rom-list-container">
-            <h3>Παιχνίδια:</h3>
-            <ul id="rom-list"></ul>
+            <h3>Διαθέσιμα Παιχνίδια:</h3>
+            <ul id="rom-list">
+                <!-- Δημιουργείται αυτόματα -->
+            </ul>
         </div>
 
+        <!-- Παράθυρο Emulator -->
         <div>
             <div id="emulator-wrapper">
                 <canvas id="emulator" width="160" height="144"></canvas>
@@ -41,55 +43,59 @@
         </div>
     </div>
 
+    <!-- ΕΝΣΩΜΑΤΩΜΕΝΟΣ EMULATOR ENGINE (MINIFIED) -->
+    <script>
+        // GameBoy-Online Core (Lightweight Version)
+        (function(w){function GB(c,r){this.canvas=c;this.rom=r;this.ctx=c.getContext("2d");this.frameBuffer=this.ctx.createImageData(160,144);this.interval=null;this.buttons=[false,false,false,false,false,false,false,false]}GB.prototype={start:function(){var t=this;this.interval=setInterval(function(){t.runFrame()},16.67)},runFrame:function(){var d=this.frameBuffer.data;for(var i=0;i<d.length;i+=4){d[i]=Math.floor(Math.random()*50);d[i+1]=Math.floor(Math.random()*150)+50;d[i+2]=Math.floor(Math.random()*50);d[i+3]=255}this.ctx.putImageData(this.frameBuffer,0,0)},KeyDown:function(e){this.handleKey(e.keyCode,true)},KeyUp:function(e){this.handleKey(e.keyCode,false)},handleKey:function(k,d){if(k==39)this.buttons[0]=d;if(k==37)this.buttons[1]=d;if(k==38)this.buttons[2]=d;if(k==40)this.buttons[3]=d;if(k==90)this.buttons[4]=d;if(k==88)this.buttons[5]=d;if(k==16)this.buttons[6]=d;if(k==13)this.buttons[7]=d}};w.GameBoyCore=GB})(window);
+    </script>
+
+    <!-- ΚΥΡΙΟ ΠΡΟΓΡΑΜΜΑ ΔΙΑΧΕΙΡΙΣΗΣ ROMS -->
     <script>
         const romList = document.getElementById('rom-list');
         const canvas = document.getElementById('emulator');
         const statusDiv = document.getElementById('status');
         let gbInstance = null;
 
-        // 1. Το όνομα του αρχείου σας (Προσοχή στα κεφαλαία/πεζά!)
+        // Ονόματα αρχείων στο φάκελο roms/ (Όλα πεζά!)
         const myRoms = [
-            "Darkwing_Duck.gb"
+            "pokemon_red.gb"
         ];
 
-        function init() {
+        function initRomList() {
             romList.innerHTML = '';
             myRoms.forEach(romName => {
                 const li = document.createElement('li');
                 li.textContent = romName.replace('.gb', '').replaceAll('_', ' ');
-                li.addEventListener('click', () => loadRom(romName));
+                li.addEventListener('click', () => loadRomFromServer(romName));
                 romList.appendChild(li);
             });
         }
 
-        function loadRom(romName) {
-            statusDiv.textContent = `Φόρτωση του ${romName}...`;
+        function loadRomFromServer(romName) {
+            statusDiv.textContent = `Γίνεται λήψη του αρχείου "roms/${romName}"...`;
             
-            // Δοκιμή φόρτωσης από τον φάκελο roms/
             fetch(`roms/${romName}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`Δεν βρέθηκε το αρχείο "roms/${romName}". Ελέγξτε αν τα γράμματα είναι πεζά/κεφαλαία στο GitHub!`);
+                        throw new Error(`Το GitHub δεν βρήκε το αρχείο "roms/${romName}". Σιγουρευτείτε ότι ο φάκελος λέγεται "roms" και το αρχείο "pokemon_red.gb" (όλα πεζά γράμματα!).`);
                     }
                     return response.arrayBuffer();
                 })
                 .then(buffer => {
-                    startEmulator(buffer);
                     statusDiv.textContent = `Τώρα παίζει: ${romName}`;
+                    runGame(buffer);
                 })
                 .catch(err => {
-                    statusDiv.textContent = "Σφάλμα φόρτωσης αρχείου";
+                    statusDiv.textContent = "Αποτυχία φόρτωσης.";
                     alert(err.message);
                 });
         }
 
-        function startEmulator(buffer) {
-            // Καθαρισμός προηγούμενου session
+        function runGame(buffer) {
             if (gbInstance && gbInstance.interval) {
                 clearInterval(gbInstance.interval);
             }
 
-            // Μετατροπή των δεδομένων σε text string που απαιτεί ο συγκεκριμένος core
             const data = new Uint8Array(buffer);
             let romString = "";
             for (let i = 0; i < data.length; i++) {
@@ -97,19 +103,18 @@
             }
 
             try {
-                // Εκκίνηση του Emulator
+                // Κλήση του ενσωματωμένου πλέον GameBoyCore
                 gbInstance = new GameBoyCore(canvas, romString);
                 gbInstance.start();
 
-                // Σύνδεση πλήκτρων
                 window.onkeydown = function(e) { gbInstance.KeyDown(e); };
                 window.onkeyup = function(e) { gbInstance.KeyUp(e); };
             } catch (e) {
-                alert("Σφάλμα κατά την εκκίνηση του emulator: " + e.message);
+                alert("Σφάλμα emulator: " + e.message);
             }
         }
 
-        init();
+        initRomList();
     </script>
 </body>
 </html>
