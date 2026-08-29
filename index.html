@@ -1,38 +1,93 @@
+```html
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Boy Live Emulator</title>
-    <style>
-        body, html { margin: 0; padding: 0; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; text-align: center; }
-        h1 { color: #4caf50; margin-top: 20px; }
-        /* Το παράθυρο του emulator παίρνει σωστές Retro διαστάσεις */
-        #emulator-container { width: 640px; height: 480px; max-width: 900px; margin: 30px auto; background: #000; border: 4px solid #333; border-radius: 8px; }
-        #game { width: 100%; height: 100%; }
-    </style>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <title>Game Boy / Game Boy Color</title>
+
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-    <h1>Game Boy Emulator (EmulatorJS)</h1>
-    <p>Το παιχνίδι φορτώνει αυτόματα από τον φάκελο roms/Darkwing_Duck.gb</p>
+<div id="app">
 
-    <!-- Το παράθυρο όπου θα εμφανιστεί το παιχνίδι -->
-    <div id="emulator-container">
-        <div id="game"></div>
+    <h1>GAME BOY / GAME BOY COLOR</h1>
+
+    <div id="rom-list">
+        Loading ROMs...
     </div>
 
-    <script>
-        // 1. ΟΙ ΡΥΘΜΙΣΕΙΣ ΠΡΕΠΕΙ ΝΑ ΕΙΝΑΙ ΠΡΩΤΕΣ ΚΑΙ ΕΚΤΟΣ ΣΥΝΑΡΤΗΣΗΣ
-        EJS_player = '#game';
-        EJS_core = 'gb'; // Σύστημα Game Boy
-        EJS_gameUrl = 'roms/Darkwing_Duck.gb'; // Η ROM σας στο GitHub
-        EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/'; // Επίσημα αρχεία συστήματος
-        EJS_startOnLoaded = true; // Ξεκινάει αυτόματα μόλις κατέβει η ROM
-    </script>
-    
-    <!-- 2. ΤΟ SCRIPT ΦΟΡΤΩΝΕΤΑΙ ΣΤΟ ΤΕΛΟΣ, ΑΦΟΥ ΕΧΟΥΝ ΟΡΙΣΤΕΙ ΤΑ ΠΑΡΑΠΑΝΩ -->
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <div id="status">
+        Select a game.
+    </div>
+
+    <div id="game-container">
+
+        <canvas
+            id="screen"
+            width="160"
+            height="144"
+        ></canvas>
+
+    </div>
+
+    <div id="controls">
+
+        <div class="dpad">
+
+            <button
+                class="up"
+                data-key="ArrowUp"
+            >▲</button>
+
+            <button
+                class="left"
+                data-key="ArrowLeft"
+            >◀</button>
+
+            <button
+                class="down"
+                data-key="ArrowDown"
+            >▼</button>
+
+            <button
+                class="right"
+                data-key="ArrowRight"
+            >▶</button>
+
+        </div>
+
+        <div class="ab">
+
+            <button data-key="z">B</button>
+            <button data-key="x">A</button>
+
+        </div>
+
+        <div class="start-select">
+
+            <button data-key="Shift">
+                SELECT
+            </button>
+
+            <button data-key="Enter">
+                START
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="emulator.js"></script>
 
 </body>
 </html>
+```
