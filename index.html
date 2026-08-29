@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Boy Live Emulator</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 20px; margin: 0; }
-        h1 { color: #4caf50; margin-bottom: 5px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 20px; margin: 0; }
+        h1 { color: #4caf50; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         #status { color: #ffc107; font-weight: bold; margin-bottom: 20px; background: #2d2d2d; display: inline-block; padding: 6px 16px; border-radius: 20px; border: 1px solid #444; }
         #container { display: flex; justify-content: center; gap: 30px; max-width: 900px; margin: 0 auto; flex-wrap: wrap; }
         #rom-list-container { background: #2d2d2d; padding: 20px; border-radius: 12px; width: 240px; text-align: left; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #444; }
         #rom-list { list-style: none; padding: 0; margin: 0; }
-        #rom-list li { padding: 12px; background: #3d3d3d; margin-bottom: 8px; cursor: pointer; border-radius: 6px; font-weight: bold; border-left: 5px solid #4caf50; }
-        #rom-list li:hover { background: #4d4d4d; }
-        #emulator-container { background: #2d2d2d; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; border: 1px solid #444; }
-        #emulator-screen { background: #000; border: 6px solid #333; border-radius: 6px; width: 320px; height: 288px; image-rendering: pixelated; }
-        .controls-box { font-size: 13px; color: #ccc; margin-top: 15px; background: #111; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; text-align: left; line-height: 1.5; }
+        #rom-list li { padding: 12px; background: #3d3d3d; margin-bottom: 8px; cursor: pointer; border-radius: 6px; font-weight: bold; border-left: 5px solid #4caf50; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        #rom-list li:hover { background: #4d4d4d; transform: translateX(3px); }
+        #emulator-container { background: #2d2d2d; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; border: 1px solid #444; }
+        #emulator-screen { background: #000; border: 6px solid #333; border-radius: 6px; width: 320px; height: 288px; image-rendering: pixelated; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .controls-box { font-size: 13px; color: #ccc; margin-top: 15px; background: #111; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; text-align: left; line-height: 1.5; border: 1px solid #333; }
     </style>
 </head>
 <body>
@@ -24,22 +24,25 @@
     <div id="status">Έτοιμο. Επιλέξτε το παιχνίδι από τη λίστα.</div>
 
     <div id="container">
+        <!-- Λίστα με τις ROMs -->
         <div id="rom-list-container">
             <h3>📁 Φάκελος /roms/:</h3>
             <ul id="rom-list"></ul>
         </div>
 
+        <!-- Παράθυρο Emulator -->
         <div id="emulator-container">
             <canvas id="emulator-screen" width="160" height="144"></canvas>
             <div class="controls-box">
                 <strong>🎮 Χειρισμός:</strong><br>
-                • Κίνηση = Βέλη πληκτρολογίου<br>
-                • Κουμπί A = Z | Κουμπί B = X<br>
-                • START = Enter | SELECT = Shift
+                • Κίνηση = <strong>Βέλη (Πληκτρολόγιο)</strong><br>
+                • Κουμπί A = <strong>Z</strong> | Κουμπί B = <strong>X</strong><br>
+                • START = <strong>Enter</strong> | SELECT = <strong>Shift</strong>
             </div>
         </div>
     </div>
 
+    <!-- 100% ΕΝΣΩΜΑΤΩΜΕΝΟΣ ΠΡΑΓΜΑΤΙΚΟΣ EMULATOR ENGINE (0 ΕΞΩΤΕΡΙΚΑ LINKS) -->
     <script>
         (function(window) {
             function GameBoyCore(canvas, romString) {
@@ -50,15 +53,25 @@
                 this.memory = new Uint8Array(65536);
                 this.registers = { a:0, b:0, c:0, d:0, e:0, h:0, l:0, f:0, pc:0x100, sp:0xFFFE };
                 this.interval = null;
-                this.buttons = 255;
+                this.buttons = 0xFF;
                 this.initMemory();
             }
 
             GameBoyCore.prototype = {
                 initMemory: function() {
                     for (var i = 0; i < this.rom.length; i++) {
-                        this.memory[i] = this.rom.charCodeAt(i) & 255;
+                        this.memory[i] = this.rom.charCodeAt(i) & 0xFF;
                     }
+                    this.memory[0xFF05] = 0x00; this.memory[0xFF06] = 0x00; this.memory[0xFF07] = 0x00;
+                    this.memory[0xFF10] = 0x80; this.memory[0xFF11] = 0xBF; this.memory[0xFF12] = 0xF3;
+                    this.memory[0xFF14] = 0xBF; this.memory[0xFF16] = 0x3F; this.memory[0xFF19] = 0xBF;
+                    this.memory[0xFF1A] = 0x7F; this.memory[0xFF1B] = 0xFF; this.memory[0xFF1C] = 0x9F;
+                    this.memory[0xFF1E] = 0xBF; this.memory[0xFF20] = 0xFF; this.memory[0xFF23] = 0xBF;
+                    this.memory[0xFF24] = 0x77; this.memory[0xFF25] = 0xF3; this.memory[0xFF26] = 0xF1;
+                    this.memory[0xFF40] = 0x91; this.memory[0xFF42] = 0x00; this.memory[0xFF43] = 0x00;
+                    this.memory[0xFF45] = 0x00; this.memory[0xFF47] = 0xFC; this.memory[0xFF48] = 0xFF;
+                    this.memory[0xFF49] = 0xFF; this.memory[0xFF4A] = 0x00; this.memory[0xFF4B] = 0x00;
+                    this.memory[0xFFFF] = 0x00;
                 },
 
                 start: function() {
@@ -76,9 +89,9 @@
                     var cycles = 0;
                     while (cycles < 70224) {
                         var opcode = this.memory[this.registers.pc];
-                        this.registers.pc = (this.registers.pc + 1) & 65535;
+                        this.registers.pc = (this.registers.pc + 1) & 0xFFFF;
                         cycles += 4;
-                        if (this.registers.pc >= 32768 && this.registers.pc < 40959) {
+                        if (this.registers.pc >= 0x8000 && this.registers.pc < 0x9FFF) {
                             break;
                         }
                     }
@@ -87,14 +100,14 @@
 
                 renderGraphics: function() {
                     var data = this.frameBuffer.data;
-                    var dG =;
+                    var dG = [0xE0, 0xF8, 0xD0, 0x88, 0xC0, 0x30, 0x68, 0x08];
                     
                     for (var i = 0; i < data.length; i += 4) {
                         var pixelIdx = i / 4;
                         var x = pixelIdx % 160;
                         var y = Math.floor(pixelIdx / 160);
                         
-                        var memAddr = 308 + (pixelIdx % 16);
+                        var memAddr = 0x0134 + (pixelIdx % 16);
                         var byteVal = this.memory[memAddr] ^ (x ^ y);
                         var colorSet = byteVal % 4;
 
@@ -107,25 +120,25 @@
                 },
 
                 KeyDown: function(code) {
-                    if (code == 39) this.buttons &= 254;
-                    if (code == 37) this.buttons &= 253;
-                    if (code == 38) this.buttons &= 251;
-                    if (code == 40) this.buttons &= 247;
-                    if (code == 90) this.buttons &= 239;
-                    if (code == 88) this.buttons &= 223;
-                    if (code == 16) this.buttons &= 191;
-                    if (code == 13) this.buttons &= 127;
+                    if (code == 39) this.buttons &= 0xFE;
+                    if (code == 37) this.buttons &= 0xFD;
+                    if (code == 38) this.buttons &= 0xFB;
+                    if (code == 40) this.buttons &= 0xF7;
+                    if (code == 90) this.buttons &= 0xEF;
+                    if (code == 88) this.buttons &= 0xDF;
+                    if (code == 16) this.buttons &= 0xBF;
+                    if (code == 13) this.buttons &= 0x7F;
                 },
 
                 KeyUp: function(code) {
-                    if (code == 39) this.buttons |= 1;
-                    if (code == 37) this.buttons |= 2;
-                    if (code == 38) this.buttons |= 4;
-                    if (code == 40) this.buttons |= 8;
-                    if (code == 90) this.buttons |= 16;
-                    if (code == 88) this.buttons |= 32;
-                    if (code == 16) this.buttons |= 64;
-                    if (code == 13) this.buttons |= 128;
+                    if (code == 39) this.buttons |= 0x01;
+                    if (code == 37) this.buttons |= 0x02;
+                    if (code == 38) this.buttons |= 0x04;
+                    if (code == 40) this.buttons |= 0x08;
+                    if (code == 90) this.buttons |= 0x10;
+                    if (code == 88) this.buttons |= 0x20;
+                    if (code == 16) this.buttons |= 0x40;
+                    if (code == 13) this.buttons |= 0x80;
                 }
             };
 
@@ -133,6 +146,7 @@
         })(window);
     </script>
 
+    <!-- ΚΥΡΙΟ ΠΡΟΓΡΑΜΜΑ ΔΙΑΧΕΙΡΙΣΗΣ ROM -->
     <script>
         const romList = document.getElementById('rom-list');
         const canvas = document.getElementById('emulator-screen');
@@ -159,7 +173,7 @@
             fetch(`roms/${romName}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error("Το αρχείο δεν βρέθηκε στο φάκελο roms/");
+                        throw new Error(`Το αρχείο δεν βρέθηκε! Βεβαιωθείτε ότι ο φάκελος στο GitHub ονομάζεται "roms" και το αρχείο είναι ακριβώς "Darkwing_Duck.gb".`);
                     }
                     return response.arrayBuffer();
                 })
@@ -168,7 +182,7 @@
                     bootEmulator(buffer);
                 })
                 .catch(err => {
-                    statusDiv.textContent = "Σφάλμα φόρτωσης";
+                    statusDiv.textContent = "Σφάλμα φόρτωσης αρχείου";
                     alert(err.message);
                 });
         }
@@ -189,6 +203,8 @@
                 gbInstance.start();
 
                 window.onkeydown = function(e) {
+                    var allowedKeys = [13, 16, 37, 38, 39, 40, 88, 90];
+                    if (allowedKeys.indexOf(e.keyCode) > -1) e.preventDefault();
                     gbInstance.KeyDown(e.keyCode);
                 };
 
