@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Boy Emulator - GitHub Pages</title>
+    <title>Game Boy Emulator</title>
     <style>
         body { font-family: Arial, sans-serif; background: #1e1e1e; color: #fff; text-align: center; padding: 20px; margin: 0; }
         h1 { color: #007bff; margin-bottom: 5px; }
@@ -17,9 +17,9 @@
         #emulator-screen { background: #000; border: 4px solid #111; border-radius: 6px; width: 320px; height: 288px; image-rendering: pixelated; }
         .controls-box { font-size: 13px; color: #bbb; margin-top: 15px; background: #111; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
     </style>
-    <!-- Φόρτωση του απόλυτα σταθερού IodineGBC core που υποστηρίζει απευθείας ArrayBuffer -->
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://jsdelivr.net"></script>
+    <!-- Χρήση του εξαιρετικά σταθερού cdnjs που επιτρέπεται παντού (GameBoy-Online Core) -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
 </head>
 <body>
 
@@ -29,7 +29,7 @@
     <div id="container">
         <!-- Λίστα ROMs -->
         <div id="rom-list-container">
-            <h3>🎮 Επιλογή Παιχνιδιού:</h3>
+            <h3>Διαθέσιμα Παιχνίδια:</h3>
             <ul id="rom-list"></ul>
         </div>
 
@@ -46,14 +46,13 @@
         const romList = document.getElementById('rom-list');
         const canvas = document.getElementById('emulator-screen');
         const statusDiv = document.getElementById('status');
-        let iodine = null;
+        let gbInstance = null;
 
-        // 1. Εδώ βάζετε τα αρχεία σας (Προσοχή: Μόνο πεζά γράμματα!)
+        // Εδώ προσθέτετε τα παιχνίδια σας. Πρέπει να είναι ΑΚΡΙΒΩΣ όπως το όνομα του αρχείου στο GitHub (μαζί με κεφαλαία/πεζά!)
         const myRoms = [
             "Darkwing_Duck.gb"
         ];
 
-        // Δημιουργία της λίστας στην οθόνη
         function initMenu() {
             romList.innerHTML = '';
             myRoms.forEach(romName => {
@@ -64,14 +63,13 @@
             });
         }
 
-        // 2. Λήψη της ROM από τον φάκελο roms/
         function downloadAndPlay(romName) {
-            statusDiv.textContent = `Γίνεται λήψη του ${romName} από τον φάκελο roms/...`;
+            statusDiv.textContent = `Φόρτωση του ${romName}...`;
             
             fetch(`roms/${romName}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`Το αρχείο "roms/${romName}" δεν βρέθηκε. Σιγουρευτείτε ότι ο φάκελος λέγεται "roms" και το αρχείο "pokemon_red.gb" με πεζά γράμματα.`);
+                        throw new Error(`Το αρχείο "roms/${romName}" δεν βρέθηκε. Βεβαιωθείτε ότι ο φάκελος λέγεται "roms" και το αρχείο ονομάζεται ακριβώς "${romName}".`);
                     }
                     return response.arrayBuffer();
                 })
@@ -85,57 +83,40 @@
                 });
         }
 
-        // 3. Εκκίνηση του κανονικού Emulator Core
         function bootEmulator(buffer) {
-            // Αν παίζει ήδη παιχνίδι, το σταματάμε
-            if (iodine) {
-                iodine.stop();
+            if (gbInstance && gbInstance.interval) {
+                clearInterval(gbInstance.interval);
+            }
+
+            // Έλεγχος αν η βιβλιοθήκη φορτώθηκε σωστά
+            if (typeof GameBoyCore === 'undefined') {
+                alert("Σφάλμα: Η βιβλιοθήκη GameBoyCore δεν μπόρεσε να φορτώσει από το ίντερνετ. Παρακαλώ ανανεώστε τη σελίδα.");
+                return;
+            }
+
+            // Μετατροπή του ArrayBuffer σε String
+            const romData = new Uint8Array(buffer);
+            let romString = "";
+            for (let i = 0; i < romData.length; i++) {
+                romString += String.fromCharCode(romData[i]);
             }
 
             try {
-                // Αρχικοποίηση του IodineGBC
-                iodine = new IodineGBC();
-                
-                // Σύνδεση του canvas με τον emulator για τα γραφικά
-                const canvasId = "emulator-screen";
-                registerCanvas(canvasId);
-                iodine.attachCanvas(canvasId);
+                // Αρχικοποίηση και έναρξη
+                gbInstance = new GameBoyCore(canvas, romString);
+                gbInstance.start();
 
-                // Φόρτωση των binary δεδομένων της ROM
-                const romArray = new Uint8Array(buffer);
-                iodine.loadROM(romArray);
-                
-                // Έναρξη του παιχνιδιού
-                iodine.play();
-
-                // Ρύθμιση των πλήκτρων
-                const keyMap = {
-                    38: 0, // Πάνω βέλος
-                    40: 1, // Κάτω βέλος
-                    37: 2, // Αριστερό βέλος
-                    39: 3, // Δεξί βέλος
-                    90: 4, // Z (Button A)
-                    88: 5, // X (Button B)
-                    13: 7, // Enter (Start)
-                    16: 6  // Shift (Select)
+                // Σύνδεση πλήκτρων
+                window.onkeydown = function(e) { 
+                    if ([37, 38, 39, 40, 13, 16].includes(e.keyCode)) e.preventDefault();
+                    gbInstance.KeyDown(e); 
                 };
-
-                window.onkeydown = function(e) {
-                    if (keyMap[e.keyCode] !== undefined) {
-                        iodine.keyDown(keyMap[e.keyCode]);
-                        e.preventDefault();
-                    }
-                };
-
-                window.onkeyup = function(e) {
-                    if (keyMap[e.keyCode] !== undefined) {
-                        iodine.keyUp(keyMap[e.keyCode]);
-                        e.preventDefault();
-                    }
+                window.onkeyup = function(e) { 
+                    gbInstance.KeyUp(e); 
                 };
 
             } catch (e) {
-                alert("Σφάλμα Emulator: " + e.message);
+                alert("Σφάλμα κατά την εκκίνηση: " + e.message);
             }
         }
 
