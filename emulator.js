@@ -1,219 +1,40 @@
 ```javascript
-/*
-    PS5 Game Boy / Game Boy Color frontend
-
-    ROMs are loaded directly from:
-
-        /roms/*.gb
-        /roms/*.gbc
-
-    No file picker is required.
-
-    IMPORTANT:
-    The actual Game Boy CPU/emulation core is expected to be provided
-    by Atlantis. This file handles the PS5-friendly ROM loading frontend.
-*/
+import gameboy from "https://cdn.skypack.dev/gameboy@0.2.0";
 
 
-const canvas = document.getElementById("screen");
-
-const romList = document.getElementById("rom-list");
-
-const statusElement = document.getElementById("status");
+const canvas =
+    document.getElementById("screen");
 
 
-let currentROM = null;
+const romList =
+    document.getElementById("rom-list");
 
-let currentROMName = null;
+
+const status =
+    document.getElementById("status");
+
+
+let emulator = null;
 
 
 /*
-    ------------------------------------------------------------
-    ROM DISCOVERY
-    ------------------------------------------------------------
+    ============================================================
+    ROM LIST
+    ============================================================
 */
 
 
-async function findROMs() {
-
-    romList.innerHTML = "";
-
-    statusElement.textContent =
-        "Scanning roms folder...";
-
-
-    /*
-        Try PHP first.
-
-        This is the most reliable solution because a normal
-        browser cannot list directory contents by itself.
-    */
+async function loadROMList() {
 
     try {
 
-        const response =
-            await fetch("roms.php", {
-                cache: "no-store"
-            });
-
-
-        if (response.ok) {
-
-            const roms =
-                await response.json();
-
-            if (Array.isArray(roms)) {
-
-                displayROMs(roms);
-
-                return;
-            }
-        }
-
-    } catch (error) {
-
-        console.log(
-            "roms.php unavailable",
-            error
-        );
-
-    }
-
-
-    /*
-        Fallback.
-
-        If PHP is unavailable, try a predefined list.
-        You can put filenames here manually.
-    */
-
-    const fallbackROMs = [
-
-        "game.gb",
-        "game.gbc",
-
-        "tetris.gb",
-        "pokemon.gbc",
-        "zelda.gbc"
-
-    ];
-
-
-    displayROMs(fallbackROMs);
-
-}
-
-
-/*
-    ------------------------------------------------------------
-    DISPLAY ROM LIST
-    ------------------------------------------------------------
-*/
-
-
-function displayROMs(roms) {
-
-    romList.innerHTML = "";
-
-
-    if (!roms.length) {
-
-        romList.innerHTML = `
-            <div>
-                No .GB or .GBC ROMs found.
-            </div>
-        `;
-
-        statusElement.textContent =
-            "Put ROMs inside the roms folder.";
-
-        return;
-    }
-
-
-    roms.forEach(
-        filename => {
-
-            const button =
-                document.createElement("button");
-
-
-            button.className =
-                "rom-button";
-
-
-            button.textContent =
-                filename;
-
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    loadROM(filename);
-
-                }
-            );
-
-
-            romList.appendChild(button);
-
-        }
-    );
-
-
-    statusElement.textContent =
-        roms.length +
-        " ROM(s) found.";
-}
-
-
-/*
-    ------------------------------------------------------------
-    LOAD ROM
-    ------------------------------------------------------------
-*/
-
-
-async function loadROM(filename) {
-
-    try {
-
-        statusElement.textContent =
-            "Loading " + filename + "...";
-
-
-        /*
-            Security:
-            only allow GB / GBC files.
-        */
-
-        if (!/\.(gb|gbc)$/i.test(filename)) {
-
-            throw new Error(
-                "Invalid ROM format."
-            );
-        }
-
-
-        /*
-            Prevent path traversal.
-        */
-
-        filename =
-            filename
-                .replaceAll("/", "")
-                .replaceAll("\\", "");
-
-
-        const url =
-            "roms/" +
-            encodeURIComponent(filename);
+        status.textContent =
+            "Scanning ROM folder...";
 
 
         const response =
             await fetch(
-                url,
+                "roms.php",
                 {
                     cache: "no-store"
                 }
@@ -223,128 +44,93 @@ async function loadROM(filename) {
         if (!response.ok) {
 
             throw new Error(
-                "ROM could not be loaded. HTTP " +
+                "roms.php returned HTTP " +
                 response.status
             );
 
         }
 
 
-        const buffer =
-            await response.arrayBuffer();
+        const roms =
+            await response.json();
 
 
-        if (!buffer.byteLength) {
+        romList.innerHTML = "";
 
-            throw new Error(
-                "ROM file is empty."
-            );
-
-        }
-
-
-        currentROM =
-            new Uint8Array(buffer);
-
-
-        currentROMName =
-            filename;
-
-
-        /*
-            ------------------------------------------------
-            ATLANTIS CONNECTION
-            ------------------------------------------------
-
-            Atlantis builds differ.
-
-            We expose the ROM globally so the emulator core
-            can consume it without requiring a browser
-            file-selection dialog.
-        */
-
-
-        window.PS5_ROM =
-            currentROM;
-
-
-        window.PS5_ROM_NAME =
-            currentROMName;
-
-
-        /*
-            Try known Atlantis-style APIs.
-        */
 
         if (
-            window.atlantis &&
-            typeof window.atlantis.loadROM === "function"
+            !Array.isArray(roms) ||
+            roms.length === 0
         ) {
 
-            await window.atlantis.loadROM(
-                currentROM
-            );
+            romList.innerHTML =
+                "<div class='empty'>" +
+                "No .GB or .GBC ROMs found." +
+                "</div>";
 
-        }
 
-        else if (
-            window.Atlantis &&
-            typeof window.Atlantis.loadROM === "function"
-        ) {
+            status.textContent =
+                "Put your ROMs inside the roms folder.";
 
-            await window.Atlantis.loadROM(
-                currentROM
-            );
 
-        }
-
-        else if (
-            typeof window.loadROM === "function" &&
-            window.loadROM !== loadROM
-        ) {
-
-            await window.loadROM(
-                currentROM
-            );
-
-        }
-
-        else {
-
-            /*
-                The ROM is successfully downloaded.
-
-                If your Atlantis build exposes its emulator
-                through another function, this is the only
-                integration point that needs changing.
-            */
-
-            console.log(
-                "ROM loaded:",
-                currentROMName,
-                currentROM.length,
-                "bytes"
-            );
+            return;
 
         }
 
 
-        statusElement.textContent =
-            "Running: " +
-            currentROMName;
+        roms.forEach(
+            filename => {
+
+                const button =
+                    document.createElement(
+                        "button"
+                    );
 
 
-        document.title =
-            currentROMName +
-            " - Game Boy";
+                button.className =
+                    "rom-button";
 
 
-    } catch (error) {
+                button.textContent =
+                    filename;
+
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        startROM(filename);
+
+                    }
+                );
+
+
+                romList.appendChild(
+                    button
+                );
+
+            }
+        );
+
+
+        status.textContent =
+            roms.length +
+            " ROM(s) found.";
+
+    }
+
+    catch (error) {
 
         console.error(error);
 
 
-        statusElement.textContent =
+        romList.innerHTML =
+            "<div class='error'>" +
+            "Could not read roms folder." +
+            "</div>";
+
+
+        status.textContent =
             "ERROR: " +
             error.message;
 
@@ -354,25 +140,217 @@ async function loadROM(filename) {
 
 
 /*
-    ------------------------------------------------------------
-    KEYBOARD
-    ------------------------------------------------------------
+    ============================================================
+    LOAD ROM
+    ============================================================
 */
+
+
+async function startROM(filename) {
+
+    try {
+
+        status.textContent =
+            "Loading " +
+            filename +
+            "...";
+
+
+        /*
+            Stop previous emulator.
+        */
+
+        if (emulator) {
+
+            try {
+
+                if (
+                    typeof emulator.stop ===
+                    "function"
+                ) {
+
+                    emulator.stop();
+
+                }
+
+            }
+
+            catch (e) {
+
+                console.log(
+                    "Previous emulator stop:",
+                    e
+                );
+
+            }
+
+
+            emulator = null;
+
+        }
+
+
+        /*
+            Load ROM directly from:
+
+                roms/FILENAME
+        */
+
+
+        const response =
+            await fetch(
+                "roms/" +
+                encodeURIComponent(filename),
+                {
+                    cache: "no-store"
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Could not load ROM. HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const rom =
+            await response.arrayBuffer();
+
+
+        if (
+            !rom ||
+            rom.byteLength === 0
+        ) {
+
+            throw new Error(
+                "ROM is empty."
+            );
+
+        }
+
+
+        /*
+            Convert to Uint8Array.
+
+            The gameboy package accepts
+            ArrayBuffer / typed ROM data.
+        */
+
+        const romData =
+            new Uint8Array(rom);
+
+
+        /*
+            Create emulator.
+
+            GameBoy-Online based emulator.
+        */
+
+        emulator =
+            gameboy(
+                canvas,
+                romData,
+                {
+
+                    bootRom: false,
+
+                    gbBootRom: false,
+
+                    prioritizeGb: false,
+
+                    interval: 4,
+
+                    imageSmoothing: false,
+
+                    colorizeGb: true,
+
+                    typedArrays: true,
+
+                    sound: true
+
+                }
+            );
+
+
+        status.textContent =
+            "Running: " +
+            filename;
+
+
+        document.title =
+            filename +
+            " - RetroGB";
+
+
+        /*
+            Make sure the emulator has focus.
+        */
+
+        canvas.focus();
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "ROM ERROR:",
+            error
+        );
+
+
+        status.textContent =
+            "ERROR: " +
+            error.message;
+
+    }
+
+}
+
+
+/*
+    ============================================================
+    KEYBOARD
+    ============================================================
+*/
+
+
+function keyboardEvent(
+    type,
+    key
+) {
+
+    window.dispatchEvent(
+        new KeyboardEvent(
+            type,
+            {
+                key: key,
+                code: key,
+                bubbles: true
+            }
+        )
+    );
+
+}
 
 
 document.addEventListener(
     "keydown",
     event => {
 
-        const allowed = [
+        const keys = [
 
             "ArrowUp",
             "ArrowDown",
             "ArrowLeft",
             "ArrowRight",
 
-            "z",
             "x",
+            "z",
 
             "Enter",
             "Shift"
@@ -381,7 +359,7 @@ document.addEventListener(
 
 
         if (
-            allowed.includes(event.key)
+            keys.includes(event.key)
         ) {
 
             event.preventDefault();
@@ -396,15 +374,15 @@ document.addEventListener(
     "keyup",
     event => {
 
-        const allowed = [
+        const keys = [
 
             "ArrowUp",
             "ArrowDown",
             "ArrowLeft",
             "ArrowRight",
 
-            "z",
             "x",
+            "z",
 
             "Enter",
             "Shift"
@@ -413,7 +391,7 @@ document.addEventListener(
 
 
         if (
-            allowed.includes(event.key)
+            keys.includes(event.key)
         ) {
 
             event.preventDefault();
@@ -425,120 +403,114 @@ document.addEventListener(
 
 
 /*
-    ------------------------------------------------------------
-    TOUCH BUTTONS
-    ------------------------------------------------------------
+    ============================================================
+    ON-SCREEN BUTTONS
+    ============================================================
 */
 
 
 document
-    .querySelectorAll("[data-key]")
-    .forEach(button => {
+    .querySelectorAll(
+        "[data-key]"
+    )
+    .forEach(
+        button => {
+
+            const key =
+                button.dataset.key;
 
 
-        const key =
-            button.dataset.key;
+            button.addEventListener(
+                "pointerdown",
+                event => {
 
+                    event.preventDefault();
 
-        button.addEventListener(
-            "pointerdown",
-            event => {
-
-                event.preventDefault();
-
-
-                window.dispatchEvent(
-                    new KeyboardEvent(
+                    keyboardEvent(
                         "keydown",
-                        {
-                            key: key,
-                            bubbles: true
-                        }
-                    )
-                );
+                        key
+                    );
 
-            }
-        );
+                }
+            );
 
 
-        button.addEventListener(
-            "pointerup",
-            event => {
+            button.addEventListener(
+                "pointerup",
+                event => {
 
-                event.preventDefault();
+                    event.preventDefault();
 
-
-                window.dispatchEvent(
-                    new KeyboardEvent(
+                    keyboardEvent(
                         "keyup",
-                        {
-                            key: key,
-                            bubbles: true
-                        }
-                    )
-                );
+                        key
+                    );
 
-            }
-        );
+                }
+            );
 
 
-        button.addEventListener(
-            "pointercancel",
-            event => {
+            button.addEventListener(
+                "pointercancel",
+                event => {
 
-                event.preventDefault();
+                    event.preventDefault();
 
-
-                window.dispatchEvent(
-                    new KeyboardEvent(
+                    keyboardEvent(
                         "keyup",
-                        {
-                            key: key,
-                            bubbles: true
-                        }
-                    )
-                );
+                        key
+                    );
 
-            }
-        );
+                }
+            );
 
-    });
+
+            button.addEventListener(
+                "pointerleave",
+                event => {
+
+                    event.preventDefault();
+
+                    keyboardEvent(
+                        "keyup",
+                        key
+                    );
+
+                }
+            );
+
+        }
+    );
 
 
 /*
-    ------------------------------------------------------------
-    GAMEPAD
-    ------------------------------------------------------------
-
-    PS5 DualSense is exposed through the browser's
-    Gamepad API when supported.
+    ============================================================
+    PS5 / DUALSENSE GAMEPAD
+    ============================================================
 */
 
 
-const gamepadState =
+const gamepadKeys =
     new Set();
 
 
-function sendGamepadKey(
+function setGamepadKey(
     key,
     pressed
 ) {
 
     if (pressed) {
 
-        if (!gamepadState.has(key)) {
+        if (
+            !gamepadKeys.has(key)
+        ) {
 
-            gamepadState.add(key);
+            gamepadKeys.add(key);
 
 
-            window.dispatchEvent(
-                new KeyboardEvent(
-                    "keydown",
-                    {
-                        key: key,
-                        bubbles: true
-                    }
-                )
+            keyboardEvent(
+                "keydown",
+                key
             );
 
         }
@@ -547,19 +519,16 @@ function sendGamepadKey(
 
     else {
 
-        if (gamepadState.has(key)) {
+        if (
+            gamepadKeys.has(key)
+        ) {
 
-            gamepadState.delete(key);
+            gamepadKeys.delete(key);
 
 
-            window.dispatchEvent(
-                new KeyboardEvent(
-                    "keyup",
-                    {
-                        key: key,
-                        bubbles: true
-                    }
-                )
+            keyboardEvent(
+                "keyup",
+                key
             );
 
         }
@@ -611,7 +580,7 @@ function pollGamepad() {
     if (pad) {
 
         /*
-            Standard Gamepad mapping.
+            Standard DualSense mapping:
 
             Cross   = A
             Circle  = B
@@ -620,87 +589,93 @@ function pollGamepad() {
         */
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "x",
             !!pad.buttons[0]?.pressed
         );
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "z",
             !!pad.buttons[1]?.pressed
         );
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "Enter",
             !!pad.buttons[9]?.pressed
         );
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "Shift",
             !!pad.buttons[8]?.pressed
         );
 
 
-        sendGamepadKey(
+        /*
+            D-Pad
+        */
+
+
+        setGamepadKey(
             "ArrowUp",
             !!pad.buttons[12]?.pressed
         );
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "ArrowDown",
             !!pad.buttons[13]?.pressed
         );
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "ArrowLeft",
             !!pad.buttons[14]?.pressed
         );
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "ArrowRight",
             !!pad.buttons[15]?.pressed
         );
 
 
         /*
-            Analog stick.
+            Left analog stick.
         */
 
-        const x =
+
+        const axisX =
             pad.axes[0] || 0;
 
 
-        const y =
+        const axisY =
             pad.axes[1] || 0;
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "ArrowLeft",
-            x < -0.5
+            axisX < -0.5
         );
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "ArrowRight",
-            x > 0.5
+            axisX > 0.5
         );
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "ArrowUp",
-            y < -0.5
+            axisY < -0.5
         );
 
 
-        sendGamepadKey(
+        setGamepadKey(
             "ArrowDown",
-            y > 0.5
+            axisY > 0.5
         );
 
     }
@@ -713,18 +688,17 @@ function pollGamepad() {
 }
 
 
-/*
-    Start Gamepad polling.
-*/
-
 requestAnimationFrame(
     pollGamepad
 );
 
 
 /*
-    Start ROM discovery.
+    ============================================================
+    START
+    ============================================================
 */
 
-findROMs();
+
+loadROMList();
 ```
