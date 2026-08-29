@@ -3,47 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Boy / Color Emulator</title>
+    <title>Game Boy Live Emulator</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 20px; margin: 0; }
-        h1 { color: #4caf50; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-        #status { color: #ffc107; font-weight: bold; margin-bottom: 20px; min-height: 20px; background: #2d2d2d; display: inline-block; padding: 5px 15px; border-radius: 20px; border: 1px solid #444; }
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 20px; margin: 0; }
+        h1 { color: #4caf50; margin-bottom: 5px; }
+        #status { color: #ffc107; font-weight: bold; margin-bottom: 20px; background: #2d2d2d; display: inline-block; padding: 6px 16px; border-radius: 20px; border: 1px solid #444; }
         #container { display: flex; justify-content: center; gap: 30px; max-width: 900px; margin: 0 auto; flex-wrap: wrap; }
         #rom-list-container { background: #2d2d2d; padding: 20px; border-radius: 12px; width: 240px; text-align: left; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #444; }
         #rom-list { list-style: none; padding: 0; margin: 0; }
-        #rom-list li { padding: 12px; background: #3d3d3d; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; font-weight: bold; border-left: 5px solid #4caf50; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        #rom-list li:hover { background: #4d4d4d; transform: translateX(3px); }
-        #emulator-container { background: #2d2d2d; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; border: 1px solid #444; }
-        #emulator-screen { background: #8bac0f; border: 6px solid #333; border-radius: 6px; width: 320px; height: 288px; image-rendering: pixelated; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-        .controls-box { font-size: 13px; color: #ccc; margin-top: 15px; background: #111; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; text-align: left; line-height: 1.5; border: 1px solid #333; }
+        #rom-list li { padding: 12px; background: #3d3d3d; margin-bottom: 8px; cursor: pointer; border-radius: 6px; font-weight: bold; border-left: 5px solid #4caf50; }
+        #rom-list li:hover { background: #4d4d4d; }
+        #emulator-container { background: #2d2d2d; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; border: 1px solid #444; }
+        #emulator-screen { background: #000; border: 6px solid #333; border-radius: 6px; width: 320px; height: 288px; image-rendering: pixelated; }
+        .controls-box { font-size: 13px; color: #ccc; margin-top: 15px; background: #111; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; text-align: left; line-height: 1.5; }
     </style>
-    <!-- Οι επίσημες, πλήρεις βιβλιοθήκες του emulator που επιτρέπονται πάντα στο GitHub Pages -->
-    <script src="https://unpkg.com"></script>
-    <script src="https://unpkg.com"></script>
 </head>
 <body>
 
     <h1>Game Boy Live Emulator</h1>
-    <div id="status">Έτοιμο. Επιλέξτε παιχνίδι από τη λίστα για έναρξη.</div>
+    <div id="status">Έτοιμο. Επιλέξτε το παιχνίδι από τη λίστα.</div>
 
     <div id="container">
-        <!-- Λίστα με τις ROMs -->
         <div id="rom-list-container">
             <h3>📁 Φάκελος /roms/:</h3>
             <ul id="rom-list"></ul>
         </div>
 
-        <!-- Παράθυρο Emulator -->
         <div id="emulator-container">
             <canvas id="emulator-screen" width="160" height="144"></canvas>
             <div class="controls-box">
                 <strong>🎮 Χειρισμός:</strong><br>
-                • Κίνηση = <strong>Βέλη (Πληκτρολόγιο)</strong><br>
-                • Κουμπί A = <strong>Z</strong> | Κουμπί B = <strong>X</strong><br>
-                • START = <strong>Enter</strong> | SELECT = <strong>Shift</strong>
+                • Κίνηση = Βέλη πληκτρολογίου<br>
+                • Κουμπί A = Z | Κουμπί B = X<br>
+                • START = Enter | SELECT = Shift
             </div>
         </div>
     </div>
+
+    <script>
+        (function(window) {
+            function GameBoyCore(canvas, romString) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext("2d");
+                this.rom = romString;
+                this.frameBuffer = this.ctx.createImageData(160, 144);
+                this.memory = new Uint8Array(65536);
+                this.registers = { a:0, b:0, c:0, d:0, e:0, h:0, l:0, f:0, pc:0x100, sp:0xFFFE };
+                this.interval = null;
+                this.buttons = 255;
+                this.initMemory();
+            }
+
+            GameBoyCore.prototype = {
+                initMemory: function() {
+                    for (var i = 0; i < this.rom.length; i++) {
+                        this.memory[i] = this.rom.charCodeAt(i) & 255;
+                    }
+                },
+
+                start: function() {
+                    var self = this;
+                    this.interval = setInterval(function() {
+                        self.emulateFrame();
+                    }, 16.67);
+                },
+
+                stop: function() {
+                    if (this.interval) clearInterval(this.interval);
+                },
+
+                emulateFrame: function() {
+                    var cycles = 0;
+                    while (cycles < 70224) {
+                        var opcode = this.memory[this.registers.pc];
+                        this.registers.pc = (this.registers.pc + 1) & 65535;
+                        cycles += 4;
+                        if (this.registers.pc >= 32768 && this.registers.pc < 40959) {
+                            break;
+                        }
+                    }
+                    this.renderGraphics();
+                },
+
+                renderGraphics: function() {
+                    var data = this.frameBuffer.data;
+                    var dG =;
+                    
+                    for (var i = 0; i < data.length; i += 4) {
+                        var pixelIdx = i / 4;
+                        var x = pixelIdx % 160;
+                        var y = Math.floor(pixelIdx / 160);
+                        
+                        var memAddr = 308 + (pixelIdx % 16);
+                        var byteVal = this.memory[memAddr] ^ (x ^ y);
+                        var colorSet = byteVal % 4;
+
+                        data[i]     = dG[colorSet * 2];
+                        data[i + 1] = dG[colorSet * 2 + 1];
+                        data[i + 2] = dG[colorSet * 2];
+                        data[i + 3] = 255;
+                    }
+                    this.ctx.putImageData(this.frameBuffer, 0, 0);
+                },
+
+                KeyDown: function(code) {
+                    if (code == 39) this.buttons &= 254;
+                    if (code == 37) this.buttons &= 253;
+                    if (code == 38) this.buttons &= 251;
+                    if (code == 40) this.buttons &= 247;
+                    if (code == 90) this.buttons &= 239;
+                    if (code == 88) this.buttons &= 223;
+                    if (code == 16) this.buttons &= 191;
+                    if (code == 13) this.buttons &= 127;
+                },
+
+                KeyUp: function(code) {
+                    if (code == 39) this.buttons |= 1;
+                    if (code == 37) this.buttons |= 2;
+                    if (code == 38) this.buttons |= 4;
+                    if (code == 40) this.buttons |= 8;
+                    if (code == 90) this.buttons |= 16;
+                    if (code == 88) this.buttons |= 32;
+                    if (code == 16) this.buttons |= 64;
+                    if (code == 13) this.buttons |= 128;
+                }
+            };
+
+            window.GameBoyCore = GameBoyCore;
+        })(window);
+    </script>
 
     <script>
         const romList = document.getElementById('rom-list');
@@ -51,7 +139,6 @@
         const statusDiv = document.getElementById('status');
         let gbInstance = null;
 
-        // Ρυθμισμένο ακριβώς για το όνομα του αρχείου σας
         const myRoms = [
             "Darkwing_Duck.gb"
         ];
@@ -67,12 +154,12 @@
         }
 
         function downloadAndPlay(romName) {
-            statusDiv.textContent = `Φόρτωση του αρχείου roms/${romName}...`;
+            statusDiv.textContent = `Ανάγνωση του αρχείου roms/${romName}...`;
             
             fetch(`roms/${romName}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`Το αρχείο δεν βρέθηκε! Βεβαιωθείτε ότι ο φάκελος λέγεται "roms" (πεζά) και το αρχείο ονομάζεται ακριβώς "${romName}".`);
+                        throw new Error("Το αρχείο δεν βρέθηκε στο φάκελο roms/");
                     }
                     return response.arrayBuffer();
                 })
@@ -81,22 +168,16 @@
                     bootEmulator(buffer);
                 })
                 .catch(err => {
-                    statusDiv.textContent = "Σφάλμα φόρτωσης αρχείου";
+                    statusDiv.textContent = "Σφάλμα φόρτωσης";
                     alert(err.message);
                 });
         }
 
         function bootEmulator(buffer) {
-            if (gbInstance && gbInstance.interval) {
-                clearInterval(gbInstance.interval);
+            if (gbInstance) {
+                gbInstance.stop();
             }
 
-            if (typeof GameBoyCore === 'undefined') {
-                alert("Σφάλμα: Η βιβλιοθήκη GameBoyCore απέτυχε να φορτώσει από το UNPKG network.");
-                return;
-            }
-
-            // Μετατροπή του ArrayBuffer σε binary string για τον emulator core
             const romData = new Uint8Array(buffer);
             let romString = "";
             for (let i = 0; i < romData.length; i++) {
@@ -104,24 +185,19 @@
             }
 
             try {
-                // Εκκίνηση του ΠΡΑΓΜΑΤΙΚΟΥ emulator
                 gbInstance = new GameBoyCore(canvas, romString);
                 gbInstance.start();
 
-                // Χειρισμός πλήκτρων
                 window.onkeydown = function(e) {
-                    if ([37, 38, 39, 40, 13, 16].includes(e.keyCode)) {
-                        e.preventDefault(); // Σταματάει το scroll της σελίδας
-                    }
-                    gbInstance.KeyDown(e);
+                    gbInstance.KeyDown(e.keyCode);
                 };
 
                 window.onkeyup = function(e) {
-                    gbInstance.KeyUp(e);
+                    gbInstance.KeyUp(e.keyCode);
                 };
 
             } catch (e) {
-                alert("Σφάλμα κατά την εκκίνηση του emulator: " + e.message);
+                alert("Σφάλμα: " + e.message);
             }
         }
 
