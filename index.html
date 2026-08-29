@@ -1,17 +1,25 @@
 ```html
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        content="width=device-width,
+                 initial-scale=1.0,
+                 maximum-scale=1.0,
+                 user-scalable=no"
     >
 
-    <title>Game Boy / Game Boy Color</title>
+    <title>RetroGB - Game Boy / Game Boy Color</title>
 
     <link rel="stylesheet" href="style.css">
+
 </head>
+
 
 <body>
 
@@ -19,13 +27,16 @@
 
     <h1>GAME BOY / GAME BOY COLOR</h1>
 
+
     <div id="rom-list">
         Loading ROMs...
     </div>
 
+
     <div id="status">
-        Select a game.
+        Initializing emulator...
     </div>
+
 
     <div id="game-container">
 
@@ -36,6 +47,7 @@
         ></canvas>
 
     </div>
+
 
     <div id="controls">
 
@@ -63,12 +75,19 @@
 
         </div>
 
+
         <div class="ab">
 
-            <button data-key="z">B</button>
-            <button data-key="x">A</button>
+            <button data-key="z">
+                B
+            </button>
+
+            <button data-key="x">
+                A
+            </button>
 
         </div>
+
 
         <div class="start-select">
 
@@ -84,10 +103,28 @@
 
     </div>
 
+
+    <div class="info">
+
+        D-Pad = Direction<br>
+
+        X = A<br>
+
+        Z = B<br>
+
+        Enter = Start<br>
+
+        Shift = Select
+
+    </div>
+
 </div>
 
-<script src="emulator.js"></script>
+
+<script type="module" src="emulator.js"></script>
+
 
 </body>
+
 </html>
 ```
