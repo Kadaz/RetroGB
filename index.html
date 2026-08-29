@@ -3,106 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Boy Emulator</title>
+    <title>Game Boy / Color Emulator</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 20px; }
-        #container { display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
-        #rom-list-container { background: #2d2d2d; padding: 20px; border-radius: 12px; width: 240px; text-align: left; }
-        #rom-list { list-style: none; padding: 0; }
-        #rom-list li { padding: 12px; background: #3d3d3d; margin-bottom: 8px; cursor: pointer; border-radius: 6px; font-weight: bold; border-left: 5px solid #4caf50; }
-        #rom-list li:hover { background: #4d4d4d; }
-        #emulator-container { background: #2d2d2d; padding: 20px; border-radius: 12px; }
-        #emulator-screen { background: #8bac0f; border: 6px solid #333; border-radius: 6px; width: 320px; height: 288px; image-rendering: pixelated; }
-        .controls-box { font-size: 13px; color: #ccc; margin-top: 15px; background: #111; padding: 12px; border-radius: 6px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 20px; margin: 0; }
+        h1 { color: #4caf50; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        #status { color: #ffc107; font-weight: bold; margin-bottom: 20px; min-height: 20px; background: #2d2d2d; display: inline-block; padding: 5px 15px; border-radius: 20px; border: 1px solid #444; }
+        #container { display: flex; justify-content: center; gap: 30px; max-width: 900px; margin: 0 auto; flex-wrap: wrap; }
+        #rom-list-container { background: #2d2d2d; padding: 20px; border-radius: 12px; width: 240px; text-align: left; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #444; }
+        #rom-list { list-style: none; padding: 0; margin: 0; }
+        #rom-list li { padding: 12px; background: #3d3d3d; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; font-weight: bold; border-left: 5px solid #4caf50; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        #rom-list li:hover { background: #4d4d4d; transform: translateX(3px); }
+        #emulator-container { background: #2d2d2d; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; border: 1px solid #444; }
+        #emulator-screen { background: #8bac0f; border: 6px solid #333; border-radius: 6px; width: 320px; height: 288px; image-rendering: pixelated; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .controls-box { font-size: 13px; color: #ccc; margin-top: 15px; background: #111; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; text-align: left; line-height: 1.5; border: 1px solid #333; }
     </style>
+    <!-- Οι επίσημες, πλήρεις βιβλιοθήκες του emulator που επιτρέπονται πάντα στο GitHub Pages -->
+    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com"></script>
 </head>
 <body>
+
     <h1>Game Boy Live Emulator</h1>
     <div id="status">Έτοιμο. Επιλέξτε παιχνίδι από τη λίστα για έναρξη.</div>
+
     <div id="container">
+        <!-- Λίστα με τις ROMs -->
         <div id="rom-list-container">
-            <h3>🌍 Παιχνίδια:</h3>
+            <h3>📁 Φάκελος /roms/:</h3>
             <ul id="rom-list"></ul>
         </div>
+
+        <!-- Παράθυρο Emulator -->
         <div id="emulator-container">
             <canvas id="emulator-screen" width="160" height="144"></canvas>
             <div class="controls-box">
-                <strong>Χειρισμός:</strong> Βέλη = Κίνηση | <strong>Z</strong> = A | <strong>X</strong> = B | <strong>Enter</strong> = Start
+                <strong>🎮 Χειρισμός:</strong><br>
+                • Κίνηση = <strong>Βέλη (Πληκτρολόγιο)</strong><br>
+                • Κουμπί A = <strong>Z</strong> | Κουμπί B = <strong>X</strong><br>
+                • START = <strong>Enter</strong> | SELECT = <strong>Shift</strong>
             </div>
         </div>
     </div>
-    <script>
-    // Standalone, ultra-lightweight Game Boy graphic engine parser built inside index.html
-    (function(window) {
-        function RealGameBoy(canvas) {
-            this.canvas = canvas;
-            this.ctx = canvas.getContext("2d");
-            this.frameBuffer = this.ctx.createImageData(160, 144);
-            this.rom = null;
-            this.memory = new Uint8Array(0x10000);
-            this.interval = null;
-        }
-        RealGameBoy.prototype = {
-            load: function(romArray) {
-                this.rom = romArray;
-                for(var i=0; i<Math.min(romArray.length, 0x8000); i++) this.memory[i] = romArray[i];
-            },
-            start: function() {
-                var self = this;
-                if(this.interval) clearInterval(this.interval);
-                this.interval = setInterval(function() { self.draw(); }, 16.67);
-            },
-            stop: function() { if(this.interval) clearInterval(this.interval); },
-            draw: function() {
-                var d = this.frameBuffer.data;
-                var colors = [[224,248,208], [136,192,112], [52,104,86], [8,24,32]];
-                for (var i = 0; i < d.length; i += 4) {
-                    var idx = (i / 4);
-                    var x = idx % 160; var y = Math.floor(idx / 160);
-                    // Extracting dynamic bytes straight from Darkwing Duck binary block mapping
-                    var romByte = this.memory[0x150 + (idx % 200)] || 0;
-                    var color = colors[romByte % 4];
-                    d[i] = color[0]; d[i+1] = color[1]; d[i+2] = color[2]; d[i+3] = 255;
-                }
-                this.ctx.putImageData(this.frameBuffer, 0, 0);
-                this.ctx.fillStyle = "#082420"; this.ctx.font = "bold 13px monospace";
-                this.ctx.fillText("DARKWING DUCK", 28, 65);
-                this.ctx.font = "10px monospace";
-                this.ctx.fillText("ROM BOOTED SUCCESS", 25, 90);
-                this.ctx.fillText("GAME RUNNING (60FPS)", 22, 110);
-            },
-            handleKey: function() {}
-        };
-        window.RealGameBoy = RealGameBoy;
-    })(window);
-    </script>
+
     <script>
         const romList = document.getElementById('rom-list');
         const canvas = document.getElementById('emulator-screen');
         const statusDiv = document.getElementById('status');
-        let emu = null;
-        const myRoms = ["Darkwing_Duck.gb"];
-        function init() {
+        let gbInstance = null;
+
+        // Ρυθμισμένο ακριβώς για το όνομα του αρχείου σας
+        const myRoms = [
+            "Darkwing_Duck.gb"
+        ];
+
+        function initMenu() {
             romList.innerHTML = '';
             myRoms.forEach(romName => {
                 const li = document.createElement('li');
                 li.textContent = romName.replace('.gb', '').replaceAll('_', ' ');
-                li.addEventListener('click', () => loadRom(romName));
+                li.addEventListener('click', () => downloadAndPlay(romName));
                 romList.appendChild(li);
             });
         }
-        function loadRom(romName) {
-            statusDiv.textContent = `Ανάγνωση του αρχείου roms/${romName}...`;
+
+        function downloadAndPlay(romName) {
+            statusDiv.textContent = `Φόρτωση του αρχείου roms/${romName}...`;
+            
             fetch(`roms/${romName}`)
-                .then(res => { if(!res.ok) throw new Error(); return res.arrayBuffer(); })
-                .then(buffer => {
-                    statusDiv.textContent = `Παίζει τώρα: ${romName}`;
-                    if(!emu) emu = new RealGameBoy(canvas);
-                    emu.stop(); emu.load(new Uint8Array(buffer)); emu.start();
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Το αρχείο δεν βρέθηκε! Βεβαιωθείτε ότι ο φάκελος λέγεται "roms" (πεζά) και το αρχείο ονομάζεται ακριβώς "${romName}".`);
+                    }
+                    return response.arrayBuffer();
                 })
-                .catch(() => { statusDiv.textContent = "Σφάλμα: Το αρχείο δεν βρέθηκε στο φάκελο roms/"; });
+                .then(buffer => {
+                    statusDiv.textContent = `Τώρα παίζει: ${romName}`;
+                    bootEmulator(buffer);
+                })
+                .catch(err => {
+                    statusDiv.textContent = "Σφάλμα φόρτωσης αρχείου";
+                    alert(err.message);
+                });
         }
-        window.onload = init;
+
+        function bootEmulator(buffer) {
+            if (gbInstance && gbInstance.interval) {
+                clearInterval(gbInstance.interval);
+            }
+
+            if (typeof GameBoyCore === 'undefined') {
+                alert("Σφάλμα: Η βιβλιοθήκη GameBoyCore απέτυχε να φορτώσει από το UNPKG network.");
+                return;
+            }
+
+            // Μετατροπή του ArrayBuffer σε binary string για τον emulator core
+            const romData = new Uint8Array(buffer);
+            let romString = "";
+            for (let i = 0; i < romData.length; i++) {
+                romString += String.fromCharCode(romData[i]);
+            }
+
+            try {
+                // Εκκίνηση του ΠΡΑΓΜΑΤΙΚΟΥ emulator
+                gbInstance = new GameBoyCore(canvas, romString);
+                gbInstance.start();
+
+                // Χειρισμός πλήκτρων
+                window.onkeydown = function(e) {
+                    if ([37, 38, 39, 40, 13, 16].includes(e.keyCode)) {
+                        e.preventDefault(); // Σταματάει το scroll της σελίδας
+                    }
+                    gbInstance.KeyDown(e);
+                };
+
+                window.onkeyup = function(e) {
+                    gbInstance.KeyUp(e);
+                };
+
+            } catch (e) {
+                alert("Σφάλμα κατά την εκκίνηση του emulator: " + e.message);
+            }
+        }
+
+        window.onload = initMenu;
     </script>
 </body>
 </html>
