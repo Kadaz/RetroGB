@@ -5,41 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Boy Live Emulator</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; margin: 0; padding: 20px; }
-        #emulator-container { width: 640px; height: 480px; max-width: 100%; margin: 20px auto; background: #000; border: 4px solid #333; border-radius: 8px; }
-        .btn { background: #4caf50; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; margin: 10px; transition: 0.2s; }
-        .btn:hover { background: #45a049; }
+        body, html { margin: 0; padding: 0; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; text-align: center; }
+        h1 { color: #4caf50; margin-top: 20px; }
+        /* Το παράθυρο του emulator παίρνει σωστές Retro διαστάσεις */
+        #emulator-container { width: 640px; height: 480px; max-width: 900px; margin: 30px auto; background: #000; border: 4px solid #333; border-radius: 8px; }
+        #game { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
 
     <h1>Game Boy Emulator (EmulatorJS)</h1>
-    <p>Πατήστε το κουμπί για να ξεκινήσει το παιχνίδι απευθείας από τον φάκελο roms/.</p>
-    
-    <!-- Κουμπί για έναρξη -->
-    <button class="btn" onclick="startGame()">Έναρξη Darkwing Duck</button>
+    <p>Το παιχνίδι φορτώνει αυτόματα από τον φάκελο roms/Darkwing_Duck.gb</p>
 
-    <!-- Το παράθυρο του Emulator -->
+    <!-- Το παράθυρο όπου θα εμφανιστεί το παιχνίδι -->
     <div id="emulator-container">
         <div id="game"></div>
     </div>
 
     <script>
-        function startGame() {
-            // Ρυθμίσεις του EmulatorJS
-            window.EJS_player = '#game';
-            window.EJS_biosUrl = ''; // Δεν χρειάζεται BIOS για το Game Boy
-            window.EJS_gameUrl = 'roms/Darkwing_Duck.gb'; // Η διαδρομή της ROM σας
-            window.EJS_core = 'gb'; // Το σύστημα (Game Boy)
-            window.EJS_pathtodata = 'https://emulatorjs.org'; // Έτοιμα αρχεία συστήματος από το επίσημο CDN τους
-            window.EJS_startOnLoaded = true;
-
-            // Φόρτωση του επίσημου script του EmulatorJS που τρέχει το παιχνίδι
-            let script = document.createElement('script');
-            script.src = 'https://emulatorjs.orgloader.js';
-            document.head.appendChild(script);
-        }
+        // 1. ΟΙ ΡΥΘΜΙΣΕΙΣ ΠΡΕΠΕΙ ΝΑ ΕΙΝΑΙ ΠΡΩΤΕΣ ΚΑΙ ΕΚΤΟΣ ΣΥΝΑΡΤΗΣΗΣ
+        EJS_player = '#game';
+        EJS_core = 'gb'; // Σύστημα Game Boy
+        EJS_gameUrl = 'roms/Darkwing_Duck.gb'; // Η ROM σας στο GitHub
+        EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/'; // Επίσημα αρχεία συστήματος
+        EJS_startOnLoaded = true; // Ξεκινάει αυτόματα μόλις κατέβει η ROM
     </script>
+    
+    <!-- 2. ΤΟ SCRIPT ΦΟΡΤΩΝΕΤΑΙ ΣΤΟ ΤΕΛΟΣ, ΑΦΟΥ ΕΧΟΥΝ ΟΡΙΣΤΕΙ ΤΑ ΠΑΡΑΠΑΝΩ -->
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 
 </body>
 </html>
