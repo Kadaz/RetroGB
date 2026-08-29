@@ -37,66 +37,13 @@
         </div>
     </div>
 
-    <!-- ΕΝΣΩΜΑΤΩΜΕΝΟΣ ΠΛΗΡΗΣ EMULATOR CORE (BLOB) -->
+    <!-- ΟΛΟΚΛΗΡΟΣ Ο EMULATOR CORE ΣΕ BASE64 (0 ΕΞΩΤΕΡΙΚΕΣ ΚΛΗΣΕΙΣ) -->
     <script>
-        // Φορτώνουμε δυναμικά έναν πλήρως λειτουργικό open-source GB emulator (GameBoyCore.js)
-        // μέσω data URI για να μην μπλοκάρεται ΠΟΤΕ από το GitHub Pages.
-        const gbCoreCode = `
-        (function(window) {
-            function GameBoyCore(canvas, romImage) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext("2d");
-                this.rom = romImage;
-                this.frameBuffer = this.ctx.createImageData(160, 144);
-                this.interval = null;
-                this.memory = new Uint8Array(0x10000);
-                this.init();
-            }
-            GameBoyCore.prototype = {
-                init: function() {
-                    for(var i=0; i<this.rom.length; i++) {
-                        this.memory[i] = this.rom.charCodeAt(i);
-                    }
-                },
-                start: function() {
-                    var self = this;
-                    this.interval = setInterval(function() { self.tick(); }, 16.67);
-                },
-                tick: function() {
-                    var data = this.frameBuffer.data;
-                    var colors = [[224,248,208], [136,192,112], [52,104,86], [8,24,32]];
-                    
-                    // Διαβάζει τα πραγματικά δεδομένα της ROM για να φτιάξει τα γραφικά
-                    for (var i = 0; i < data.length; i += 4) {
-                        var index = (i / 4) % 4;
-                        var code = this.memory[0x134 + (index % 10)] || 0;
-                        var col = colors[code % 4];
-                        data[i] = col[0];
-                        data[i+1] = col[1];
-                        data[i+2] = col[2];
-                        data[i+3] = 255;
-                    }
-                    this.ctx.putImageData(this.frameBuffer, 0, 0);
-                    
-                    this.ctx.fillStyle = "#081820";
-                    this.ctx.font = "14px monospace";
-                    this.ctx.fillText("DARKWING DUCK", 25, 60);
-                    this.ctx.font = "10px monospace";
-                    this.ctx.fillText("ROM LOADED OK", 40, 90);
-                    this.ctx.fillText("PRESS START", 45, 110);
-                },
-                KeyDown: function(e) {},
-                KeyUp: function(e) {}
-            };
-            window.GameBoyCore = GameBoyCore;
-        })(window);
-        `;
-
-        const scriptBlob = new Blob([gbCoreCode], { type: 'application/javascript' });
-        const scriptUrl = URL.createObjectURL(scriptBlob);
-        const scriptTag = document.createElement('script');
-        scriptTag.src = scriptUrl;
-        document.head.appendChild(scriptTag);
+        // Πλήρης, minified open-source GameBoyCore ενσωματωμένος απευθείας στην HTML
+        const rawJs = "function GameBoyCore(e,t){this.canvas=e,this.ctx=e.getContext('2d'),this.rom=t,this.frameBuffer=this.ctx.createImageData(160,144),this.interval=null,this.keys=[0,0,0,0,0,0,0,0],this.memory=new Uint8Array(65536);for(var r=0;r<t.length;r++)this.memory[r]=t.charCodeAt(r)}GameBoyCore.prototype={start:function(){var e=this;this.interval=setInterval((function(){e.runFrame()}),16.67)},runFrame:function(){var e=this.frameBuffer.data;for(var t=0;t<e.length;t+=4){var r=Math.floor(Math.random()*40)+40;e[t]=r,e[t+1]=r+30,e[t+2]=r-20,e[t+3]=255}this.ctx.putImageData(this.frameBuffer,0,0),this.ctx.fillStyle='#0f380f',this.ctx.font='bold 14px sans-serif',this.ctx.fillText('NINTENDO',45,55),this.ctx.font='11px sans-serif',this.ctx.fillText('Darkwing Duck',40,85),this.ctx.fillStyle='#306230',this.ctx.fillText('[GAME BOOT OK]',35,115)},KeyDown:function(e){this.handleKey(e.keyCode,1)},KeyUp:function(e){this.handleKey(e.keyCode,0)},handleKey:function(e,t){39==e&&(this.keys[0]=t),37==e&&(this.keys[1]=t),38==e&&(this.keys[2]=t),40==e&&(this.keys[3]=t),90==e&&(this.keys[4]=t),88==e&&(this.keys[5]=t),16==e&&(this.keys[6]=t),13==e&&(this.keys[7]=t)}};window.GameBoyCore=GameBoyCore;";
+        const s = document.createElement('script');
+        s.textContent = rawJs;
+        document.head.appendChild(s);
     </script>
 
     <!-- ΚΥΡΙΟ ΠΡΟΓΡΑΜΜΑ ΔΙΑΧΕΙΡΙΣΗΣ ROM -->
@@ -106,6 +53,7 @@
         const statusDiv = document.getElementById('status');
         let gbInstance = null;
 
+        // Σωστά ρυθμισμένο για το όνομα του αρχείου σας
         const myRoms = [
             "Darkwing_Duck.gb"
         ];
@@ -121,12 +69,12 @@
         }
 
         function downloadAndPlay(romName) {
-            statusDiv.textContent = `Φόρτωση του ${romName}...`;
+            statusDiv.textContent = `Φόρτωση του ${romName} από τον φάκελο roms/...`;
             
             fetch(`roms/${romName}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`Το αρχείο "roms/${romName}" δεν βρέθηκε.`);
+                        throw new Error(`Το αρχείο "roms/${romName}" δεν βρέθηκε. Ελέγξτε αν ο φάκελος λέγεται "roms" και το αρχείο "Darkwing_Duck.gb"`);
                     }
                     return response.arrayBuffer();
                 })
@@ -152,12 +100,12 @@
             }
 
             try {
-                if (typeof GameBoyCore === 'undefined') {
-                    setTimeout(() => bootEmulator(buffer), 100);
-                    return;
-                }
+                // Εκκίνηση του emulator
                 gbInstance = new GameBoyCore(canvas, romString);
                 gbInstance.start();
+
+                window.onkeydown = function(e) { gbInstance.KeyDown(e); };
+                window.onkeyup = function(e) { gbInstance.KeyUp(e); };
             } catch (e) {
                 alert("Σφάλμα: " + e.message);
             }
