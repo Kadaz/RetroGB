@@ -4,108 +4,340 @@
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width,
-                 initial-scale=1.0,
-                 maximum-scale=1.0,
-                 user-scalable=no"
-    >
+<meta
+    name="viewport"
+    content="width=device-width,
+             initial-scale=1.0,
+             maximum-scale=1.0,
+             user-scalable=no"
+>
 
-    <title>Game Boy / Game Boy Color</title>
+<title>Game Boy / Game Boy Color</title>
 
-    <link rel="stylesheet" href="style.css">
+<style>
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background: #000;
+
+    overflow: hidden;
+
+    font-family: Arial, sans-serif;
+}
+
+#menu {
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+
+    z-index: 9999;
+
+    background: #111;
+
+    color: white;
+
+    text-align: center;
+
+    padding: 10px;
+
+}
+
+#menu h1 {
+
+    margin: 3px 0 10px;
+
+    font-size: 20px;
+
+}
+
+#games {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    justify-content: center;
+
+    gap: 8px;
+
+}
+
+.game {
+
+    padding: 10px 18px;
+
+    background: #222;
+
+    color: white;
+
+    border: 1px solid #555;
+
+    border-radius: 8px;
+
+    font-size: 15px;
+
+}
+
+.game:active {
+
+    background: #555;
+
+}
+
+#status {
+
+    margin-top: 8px;
+
+    color: #aaa;
+
+    font-size: 12px;
+
+}
+
+#game {
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    z-index: 1;
+
+}
+
+</style>
 
 </head>
 
+
 <body>
 
-<div id="app">
+
+<div id="menu">
 
     <h1>GAME BOY / GAME BOY COLOR</h1>
 
-
-    <div id="rom-list">
-        Loading ROMs...
+    <div id="games">
+        Loading ROM list...
     </div>
-
 
     <div id="status">
-        Select a game.
-    </div>
-
-
-    <div id="game-container">
-
-        <canvas
-            id="screen"
-            width="160"
-            height="144"
-        ></canvas>
-
-    </div>
-
-
-    <div id="controls">
-
-        <div class="dpad">
-
-            <button
-                class="up"
-                data-key="ArrowUp"
-            >▲</button>
-
-            <button
-                class="left"
-                data-key="ArrowLeft"
-            >◀</button>
-
-            <button
-                class="down"
-                data-key="ArrowDown"
-            >▼</button>
-
-            <button
-                class="right"
-                data-key="ArrowRight"
-            >▶</button>
-
-        </div>
-
-
-        <div class="ab">
-
-            <button data-key="z">
-                B
-            </button>
-
-            <button data-key="x">
-                A
-            </button>
-
-        </div>
-
-
-        <div class="start-select">
-
-            <button data-key="Shift">
-                SELECT
-            </button>
-
-            <button data-key="Enter">
-                START
-            </button>
-
-        </div>
-
+        Ready
     </div>
 
 </div>
 
 
-<script src="emulator.js"></script>
+<div id="game"></div>
+
+
+<script>
+
+/*
+============================================================
+ROM LIST
+============================================================
+*/
+
+/*
+    IMPORTANT:
+
+    Put the exact filenames of your ROMs here.
+
+    Example:
+
+    "Tetris.gb"
+    "PokemonCrystal.gbc"
+*/
+
+const ROMS = [
+
+    "game1.gb",
+    "game2.gbc"
+
+];
+
+
+/*
+============================================================
+CREATE GAME BUTTONS
+============================================================
+*/
+
+const games =
+    document.getElementById("games");
+
+const status =
+    document.getElementById("status");
+
+
+games.innerHTML = "";
+
+
+ROMS.forEach(function(filename) {
+
+    const button =
+        document.createElement("button");
+
+
+    button.className =
+        "game";
+
+
+    button.textContent =
+        filename;
+
+
+    button.onclick =
+        function() {
+
+            startGame(filename);
+
+        };
+
+
+    games.appendChild(button);
+
+});
+
+
+status.textContent =
+    ROMS.length +
+    " ROM(s) available.";
+
+
+/*
+============================================================
+START EMULATORJS
+============================================================
+*/
+
+function startGame(filename) {
+
+    status.textContent =
+        "Loading " +
+        filename +
+        "...";
+
+
+    /*
+        EmulatorJS configuration.
+
+        Game Boy / Game Boy Color core.
+    */
+
+    window.EJS_player =
+        "#game";
+
+
+    window.EJS_core =
+        "gb";
+
+
+    window.EJS_gameName =
+        filename;
+
+
+    window.EJS_gameUrl =
+        "roms/" +
+        encodeURIComponent(filename);
+
+
+    window.EJS_pathtodata =
+        "https://cdn.emulatorjs.org/stable/data/";
+
+
+    /*
+        Start immediately.
+    */
+
+    window.EJS_startOnLoaded =
+        true;
+
+
+    /*
+        Hide the ROM menu once the game starts.
+    */
+
+    document.getElementById("menu").style.display =
+        "none";
+
+
+    /*
+        Load EmulatorJS.
+    */
+
+    const old =
+        document.getElementById(
+            "emulatorjs-loader"
+        );
+
+
+    if (old) {
+
+        old.remove();
+
+    }
+
+
+    const script =
+        document.createElement("script");
+
+
+    script.id =
+        "emulatorjs-loader";
+
+
+    script.src =
+        "https://cdn.emulatorjs.org/stable/data/loader.js";
+
+
+    script.onload =
+        function() {
+
+            console.log(
+                "EmulatorJS loaded"
+            );
+
+        };
+
+
+    script.onerror =
+        function() {
+
+            document.getElementById(
+                "menu"
+            ).style.display = "block";
+
+
+            status.textContent =
+                "Could not load EmulatorJS.";
+
+        };
+
+
+    document.body.appendChild(
+        script
+    );
+
+}
+
+</script>
 
 
 </body>
